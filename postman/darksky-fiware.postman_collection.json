@@ -1,0 +1,477 @@
+{
+  "info": {
+    "name": "DarkSky FIWARE",
+    "_postman_id": "darksky-fiware-collection-v2",
+    "description": "Collection completa para provisionar e testar o DarkSky no FIWARE — v2 com fórmula híbrida",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "HOST",
+      "value": "74.235.202.170"
+    },
+    {
+      "key": "ORION",
+      "value": "http://74.235.202.170:1026"
+    },
+    {
+      "key": "IOTA",
+      "value": "http://74.235.202.170:4041"
+    },
+    {
+      "key": "APIKEY",
+      "value": "darksky2026"
+    },
+    {
+      "key": "DEVICE_ID",
+      "value": "darksky-esp32-001"
+    },
+    {
+      "key": "ENTITY_TYPE",
+      "value": "DarkSkyStation"
+    },
+    {
+      "key": "ENTITY_ID",
+      "value": "urn:ngsi-ld:DarkSkyStation:001"
+    },
+    {
+      "key": "FIWARE_SERVICE",
+      "value": "darksky"
+    },
+    {
+      "key": "FIWARE_PATH",
+      "value": "/"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Health Check",
+      "item": [
+        {
+          "name": "1.1 Orion - Versão",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{ORION}}/version",
+              "host": [
+                "{{ORION}}"
+              ],
+              "path": [
+                "version"
+              ]
+            }
+          }
+        },
+        {
+          "name": "1.2 IoT Agent - Versão",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{IOTA}}/iot/about",
+              "host": [
+                "{{IOTA}}"
+              ],
+              "path": [
+                "iot",
+                "about"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Provisionar Dispositivo",
+      "item": [
+        {
+          "name": "2.1 Criar Service Group",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "fiware-service",
+                "value": "{{FIWARE_SERVICE}}"
+              },
+              {
+                "key": "fiware-servicepath",
+                "value": "{{FIWARE_PATH}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"services\": [\n    {\n      \"apikey\": \"{{APIKEY}}\",\n      \"cbroker\": \"http://orion:1026\",\n      \"entity_type\": \"{{ENTITY_TYPE}}\",\n      \"resource\": \"/iot/d\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{IOTA}}/iot/services",
+              "host": [
+                "{{IOTA}}"
+              ],
+              "path": [
+                "iot",
+                "services"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2.2 Registrar Dispositivo ESP32",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "fiware-service",
+                "value": "{{FIWARE_SERVICE}}"
+              },
+              {
+                "key": "fiware-servicepath",
+                "value": "{{FIWARE_PATH}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"devices\": [\n    {\n      \"device_id\": \"{{DEVICE_ID}}\",\n      \"entity_name\": \"{{ENTITY_ID}}\",\n      \"entity_type\": \"{{ENTITY_TYPE}}\",\n      \"protocol\": \"PDI-IoTA-UltraLight\",\n      \"transport\": \"MQTT\",\n      \"attributes\": [\n        { \"object_id\": \"t\", \"name\": \"temperature\",      \"type\": \"Number\" },\n        { \"object_id\": \"h\", \"name\": \"humidity\",          \"type\": \"Number\" },\n        { \"object_id\": \"p\", \"name\": \"pressure\",          \"type\": \"Number\" },\n        { \"object_id\": \"l\", \"name\": \"ldrRaw\",            \"type\": \"Number\" }\n      ],\n      \"static_attributes\": [\n        { \"name\": \"skyScore\",          \"type\": \"Number\", \"value\": 0 },\n        { \"name\": \"fatorLocal\",        \"type\": \"Number\", \"value\": 0 },\n        { \"name\": \"fatorOrbital\",      \"type\": \"Number\", \"value\": 0 },\n        { \"name\": \"multiplicadorAtm\",  \"type\": \"Number\", \"value\": 0 },\n        { \"name\": \"multiplicadorLum\",  \"type\": \"Number\", \"value\": 0 },\n        { \"name\": \"coberturaNuvens\",   \"type\": \"Number\", \"value\": 0 },\n        { \"name\": \"polvLuminosa\",      \"type\": \"Number\", \"value\": 0 }\n      ],\n      \"commands\": [\n        { \"name\": \"led\", \"type\": \"command\" }\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{IOTA}}/iot/devices",
+              "host": [
+                "{{IOTA}}"
+              ],
+              "path": [
+                "iot",
+                "devices"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Verificar Provisionamento",
+      "item": [
+        {
+          "name": "3.1 Listar Services",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "fiware-service",
+                "value": "{{FIWARE_SERVICE}}"
+              },
+              {
+                "key": "fiware-servicepath",
+                "value": "{{FIWARE_PATH}}"
+              }
+            ],
+            "url": {
+              "raw": "{{IOTA}}/iot/services",
+              "host": [
+                "{{IOTA}}"
+              ],
+              "path": [
+                "iot",
+                "services"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3.2 Listar Dispositivos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "fiware-service",
+                "value": "{{FIWARE_SERVICE}}"
+              },
+              {
+                "key": "fiware-servicepath",
+                "value": "{{FIWARE_PATH}}"
+              }
+            ],
+            "url": {
+              "raw": "{{IOTA}}/iot/devices",
+              "host": [
+                "{{IOTA}}"
+              ],
+              "path": [
+                "iot",
+                "devices"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3.3 Verificar Entidade no Orion",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "fiware-service",
+                "value": "{{FIWARE_SERVICE}}"
+              },
+              {
+                "key": "fiware-servicepath",
+                "value": "{{FIWARE_PATH}}"
+              }
+            ],
+            "url": {
+              "raw": "{{ORION}}/v2/entities/{{ENTITY_ID}}",
+              "host": [
+                "{{ORION}}"
+              ],
+              "path": [
+                "v2",
+                "entities",
+                "{{ENTITY_ID}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Testar Dados",
+      "item": [
+        {
+          "name": "4.1 Listar Todas Entidades",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "fiware-service",
+                "value": "{{FIWARE_SERVICE}}"
+              },
+              {
+                "key": "fiware-servicepath",
+                "value": "{{FIWARE_PATH}}"
+              }
+            ],
+            "url": {
+              "raw": "{{ORION}}/v2/entities",
+              "host": [
+                "{{ORION}}"
+              ],
+              "path": [
+                "v2",
+                "entities"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.2 Consultar skyScore Atual",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "fiware-service",
+                "value": "{{FIWARE_SERVICE}}"
+              },
+              {
+                "key": "fiware-servicepath",
+                "value": "{{FIWARE_PATH}}"
+              }
+            ],
+            "url": {
+              "raw": "{{ORION}}/v2/entities/{{ENTITY_ID}}/attrs/skyScore",
+              "host": [
+                "{{ORION}}"
+              ],
+              "path": [
+                "v2",
+                "entities",
+                "{{ENTITY_ID}}",
+                "attrs",
+                "skyScore"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.3 Consultar Entidade Completa",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "fiware-service",
+                "value": "{{FIWARE_SERVICE}}"
+              },
+              {
+                "key": "fiware-servicepath",
+                "value": "{{FIWARE_PATH}}"
+              }
+            ],
+            "url": {
+              "raw": "{{ORION}}/v2/entities/{{ENTITY_ID}}",
+              "host": [
+                "{{ORION}}"
+              ],
+              "path": [
+                "v2",
+                "entities",
+                "{{ENTITY_ID}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.4 Enviar Comando LED ao ESP32",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "fiware-service",
+                "value": "{{FIWARE_SERVICE}}"
+              },
+              {
+                "key": "fiware-servicepath",
+                "value": "{{FIWARE_PATH}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"led\": {\n    \"type\": \"command\",\n    \"value\": \"green\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{ORION}}/v2/entities/{{ENTITY_ID}}/attrs",
+              "host": [
+                "{{ORION}}"
+              ],
+              "path": [
+                "v2",
+                "entities",
+                "{{ENTITY_ID}}",
+                "attrs"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Limpeza (se precisar recomeçar)",
+      "item": [
+        {
+          "name": "5.1 Deletar Dispositivo",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "fiware-service",
+                "value": "{{FIWARE_SERVICE}}"
+              },
+              {
+                "key": "fiware-servicepath",
+                "value": "{{FIWARE_PATH}}"
+              }
+            ],
+            "url": {
+              "raw": "{{IOTA}}/iot/devices/{{DEVICE_ID}}",
+              "host": [
+                "{{IOTA}}"
+              ],
+              "path": [
+                "iot",
+                "devices",
+                "{{DEVICE_ID}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "5.2 Deletar Service Group",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "fiware-service",
+                "value": "{{FIWARE_SERVICE}}"
+              },
+              {
+                "key": "fiware-servicepath",
+                "value": "{{FIWARE_PATH}}"
+              }
+            ],
+            "url": {
+              "raw": "{{IOTA}}/iot/services/?resource=/iot/d&apikey={{APIKEY}}",
+              "host": [
+                "{{IOTA}}"
+              ],
+              "path": [
+                "iot",
+                "services",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "resource",
+                  "value": "/iot/d"
+                },
+                {
+                  "key": "apikey",
+                  "value": "{{APIKEY}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "5.3 Deletar Entidade no Orion",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "fiware-service",
+                "value": "{{FIWARE_SERVICE}}"
+              },
+              {
+                "key": "fiware-servicepath",
+                "value": "{{FIWARE_PATH}}"
+              }
+            ],
+            "url": {
+              "raw": "{{ORION}}/v2/entities/{{ENTITY_ID}}",
+              "host": [
+                "{{ORION}}"
+              ],
+              "path": [
+                "v2",
+                "entities",
+                "{{ENTITY_ID}}"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
