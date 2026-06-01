@@ -1,0 +1,15 @@
+[Unit]
+Description=DarkSky Python — Processamento na Nuvem
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=azureuser
+WorkingDirectory=/home/azureuser/darksky-python
+ExecStart=/usr/bin/python3 /home/azureuser/darksky-python/darksky_python.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
