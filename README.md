@@ -1,7 +1,7 @@
 # Sky Aware — DarkSky Station
 ### Edge Computing & Computer Systems · Global Solution 2026 · FIAP
 
-> Estação de monitoramento hiperlocal do céu noturno. Coleta dados físicos do ambiente via ESP32, integra com dados orbitais de satélites em tempo real e calcula o **Sky Observation Score** — um índice de 0 a 10 que indica a qualidade do céu para observação astronômica. Inclui telemetria ao vivo, histórico persistido e alertas físicos (LED + buzzer).
+> Estação de monitoramento hiperlocal do céu noturno. Coleta dados físicos do ambiente via ESP32, integra com dados orbitais de satélites em tempo real e calcula o **Sky Observation Score** — um índice de 0 a 10 que indica a qualidade do céu para observação astronômica. Inclui telemetria ao vivo, histórico persistido e alertas físicos (LED + buzzer + display OLED).
 
 ---
 
@@ -42,42 +42,13 @@ A **DarkSky Station** resolve isso: é o ponto de borda do sistema que mede o am
 
 ## Por que Edge Computing é essencial aqui
 
-O ESP32 não é um sensor passivo. Ele é o **ponto de convergência entre a inteligência orbital (macro, global) e a inteligência local (hiperlocal, imediata)**: mede fisicamente o ambiente do observador, publica via MQTT, recebe de volta uma decisão calculada na nuvem e a executa como ação concreta — acende LED verde/vermelho e aciona o buzzer. Um site puro ou uma API orbital trabalham apenas com dados macro; o DarkSky adiciona a camada física que esses sistemas não alcançam.
+O ESP32 não é um sensor passivo. Ele é o **ponto de convergência entre a inteligência orbital (macro, global) e a inteligência local (hiperlocal, imediata)**: mede fisicamente o ambiente do observador, publica via MQTT, recebe de volta uma decisão calculada na nuvem e a executa como ação concreta — aciona LED verde/vermelho, buzzer e display OLED. Um site puro ou uma API orbital trabalham apenas com dados macro; o DarkSky adiciona a camada física que esses sistemas não alcançam.
 
 ---
 
 ## Arquitetura do Sistema
 
-```
-   N2YO API (Starlink)  ───────────────┐
-   Open-Meteo API (nuvens) ────────────┤
-   Atlas Bortle (poluição luminosa) ───┤
-                                        ▼
-                       Python / Flask (VM Azure)
-                       ├── f_orbital  → N2YO (Starlink sobre o observador)
-                       ├── M_atm      → Open-Meteo (cobertura de nuvens)
-                       ├── M_lum      → BORTLE_MAP (poluição luminosa)
-                       ├── f_local    → lê sensores do ESP32 no Orion CB
-                       ├── calcula Sky Observation Score (fórmula híbrida)
-                       └── grava histórico em SQLite (/history)
-                                        │
-                       FIWARE Orion Context Broker
-                       └── IoT Agent UL  ←→  Mosquitto (MQTT)
-                                        │
-                    ┌───────────────────┘
-                    ▼
-           ESP32 — DarkSky Station (Wokwi)
-           ├── DHT22  → temperatura, umidade
-           ├── BMP180 → pressão atmosférica
-           ├── LDR    → luminosidade local
-           ├── publica dados RAW via MQTT → FIWARE
-           └── recebe comando e aciona LED verde/vermelho + buzzer + OLED
-                    │
-                    ▼
-           Dashboard Web (GitHub Pages)
-           consome a Flask API via HTTPS
-           3 perfis · score ao vivo · previsão · histórico
-```
+![Arquitetura do DarkSky Station](docs/arquitetura.png)
 
 A arquitetura é de mão dupla: o dado orbital desce do espaço, chega ao Python na nuvem, é cruzado com os dados físicos medidos pelo ESP32, e retorna ao dispositivo de borda como uma ação concreta.
 
@@ -120,7 +91,7 @@ SCORE FINAL (0 a 10):
   Score = B × M_atm × M_lum × 10
 ```
 
-### Comportamento dos LEDs e Buzzer
+### Comportamento dos atuadores (LED, buzzer e OLED)
 
 | Score | LED Verde | LED Vermelho | Buzzer | Status no OLED |
 |---|---|---|---|---|
@@ -151,8 +122,8 @@ O sistema monitora múltiplos parâmetros (requisito: ao menos 3), combinando se
 O sistema cobre as três dimensões temporais da observação:
 
 - **Passado** → histórico do Sky Score persistido em SQLite, exposto via `/history` e plotado em gráfico no dashboard (perfil Observatório).
-- **Presente** → score ao vivo, atualizado a cada 5 s, com telemetria dos sensores e satélites.
-- **Futuro** → previsão de 7 dias via Open-Meteo, com score projetado por noite.
+- **Presente** → score ao vivo: o dashboard consulta a API a cada 5 s; o backend recalcula o score a cada 10 s, com telemetria dos sensores e satélites.
+- **Futuro** → previsão das próximas 12 horas via Open-Meteo (endpoint `/forecast` deste backend), com score projetado por horário. O site final da plataforma Sky Aware estende isso com previsão de 7 dias.
 
 ---
 
@@ -227,7 +198,7 @@ mosquitto_sub -h localhost -p 1883 \
 
 ## Flask API
 
-**Base URL:** `https://darksky-fiap.duckdns.org` · CORS liberado · sem autenticação
+**Base URL:** `https://darksky-fiap.duckdns.org` (via domínio + Nginx) ou `http://SEU_IP_DA_VM:5000` (acesso direto) · CORS liberado · sem autenticação
 
 | Endpoint | Método | Função |
 |---|---|---|
@@ -235,7 +206,7 @@ mosquitto_sub -h localhost -p 1883 \
 | `/score` | GET | Score atual + telemetria + array de satélites |
 | `/history` | GET | Histórico do Sky Score (SQLite) para o gráfico |
 | `/location` | POST | Atualiza localização e recalcula condições |
-| `/forecast` | GET | Previsão de nuvens e score projetado |
+| `/forecast` | GET | Previsão de nuvens e score projetado (12h) |
 | `/simulate` | POST | Simula condições para demonstração |
 | `/simulate/reset` | POST | Volta para dados reais das APIs |
 
@@ -279,7 +250,7 @@ A chave `satelites` traz satélites das constelações Starlink e OneWeb sobre o
 | API | Dado | Papel na fórmula |
 |---|---|---|
 | [N2YO](https://www.n2yo.com/api/) | Satélites Starlink (cat.52) e OneWeb (cat.53) sobre coordenada | f_orbital + mapa de satélites |
-| [Open-Meteo](https://open-meteo.com/) | Cobertura de nuvens + previsão 7d | M_atm + previsão |
+| [Open-Meteo](https://open-meteo.com/) | Cobertura de nuvens + previsão 12h | M_atm + previsão |
 | Atlas Bortle (Falchi et al., 2016) | Índice de poluição luminosa por cidade | M_lum |
 
 > **Nota sobre o fator orbital:** o `f_orbital` do score considera apenas Starlink (cat. 52), a principal fonte de rastros visíveis em LEO. Já a chave `satelites` (consumida pelo mapa de céu do front) inclui Starlink **e** OneWeb. OneWeb não entra no cálculo do score por estar em órbita mais alta e causar menos rastros, mas aparece no mapa por ser uma constelação de internet relevante.
@@ -290,7 +261,7 @@ A chave `satelites` traz satélites das constelações Starlink e OneWeb sobre o
 
 ## Dashboard
 
-Este repositório inclui um **dashboard de teste** (`site/dashboard-teste.html`) usado para validar a camada de Edge Computing: ele consome a Flask API via HTTPS e exibe o Sky Score ao vivo, a telemetria dos sensores, a previsão de 7 dias e o gráfico de histórico. Serve como prova de funcionamento ponta a ponta (ESP32 → FIWARE → Python → API → visualização).
+Este repositório inclui um **dashboard de teste** (`site/dashboard-teste.html`) usado para validar a camada de Edge Computing: ele consome a Flask API e exibe o Sky Score ao vivo, a telemetria dos sensores, a previsão das próximas 12 horas e o gráfico de histórico, com três perfis de usuário (Amador, Astrofotógrafo, Observatório). Serve como prova de funcionamento ponta a ponta (ESP32 → FIWARE → Python → API → visualização). O acesso à API pode ser HTTP (teste local) ou HTTPS (via domínio com Nginx).
 
 O **site final da plataforma Sky Aware** é desenvolvido pela equipe de front-end em repositório separado e consome a mesma API. O link será adicionado aqui quando publicado.
 
@@ -373,7 +344,7 @@ skyaware-edge-computing/
 │   └── dashboard-teste.html          ← dashboard de teste (valida a API Edge)
 └── docs/
     ├── API_satelites.md              ← contrato da API de satélites (para o front)
-    └── arquitetura.png               ← (adicionar diagrama)
+    └── arquitetura.png               ← diagrama de arquitetura
 ```
 
 ---
@@ -389,7 +360,7 @@ skyaware-edge-computing/
 | Histórico | SQLite (série temporal do Sky Score) |
 | Segurança | Nginx + Let's Encrypt (HTTPS) + DuckDNS |
 | Infraestrutura | VM Azure Ubuntu 22.04 + Docker Compose |
-| Dashboard | HTML + CSS + JavaScript (GitHub Pages) |
+| Dashboard de teste | HTML + CSS + JavaScript (Chart.js) |
 
 ---
 
