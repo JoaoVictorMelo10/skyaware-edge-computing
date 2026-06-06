@@ -36,13 +36,18 @@ Mas o problema não é só orbital — condições físicas locais como umidade 
 
 > **Nenhum satélite consegue medir a luminosidade em tempo real do seu ponto de observação. Nenhum servidor na nuvem sabe se há neblina no seu local agora. O ESP32 sabe.**
 
-A **DarkSky Station** resolve isso: é o dispositivo de borda que fica no ponto de observação — seja o quintal de casa ou um local remoto de céu escuro a centenas de quilômetros, onde pode ser deixado instalado — medindo o ambiente físico exatamente onde a observação acontece e combinando esse dado com a inteligência orbital processada na nuvem.
+A **DarkSky Station** resolve isso: é o dispositivo de borda que fica no ponto de observação, e funciona em dois modos:
+
+- **No local, com o observador presente** (ex: o quintal de casa): os atuadores físicos dão feedback imediato — LED verde/vermelho, buzzer e display OLED dizem na hora se vale observar, sem precisar olhar o celular.
+- **Instalado num ponto fixo remoto** (ex: um sítio de céu escuro a dezenas de quilômetros): a Station continua medindo e publicando os dados na nuvem via FIWARE, e o observador consulta as condições daquele ponto à distância, pelo site, antes de se deslocar até lá.
+
+Nos dois casos, ela mede o ambiente físico exatamente onde a observação acontece e combina esse dado com a inteligência orbital processada na nuvem.
 
 ---
 
 ## Por que Edge Computing é essencial aqui
 
-O ESP32 não é um sensor passivo. Ele é o **ponto de convergência entre a inteligência orbital (macro, global) e a inteligência local (no ponto exato de observação)**: instalado no local onde a observação acontece — do quintal a um ponto remoto de céu escuro onde fica fixo —, mede fisicamente o ambiente, publica via MQTT, recebe de volta uma decisão calculada na nuvem e a executa como ação concreta — aciona LED verde/vermelho, buzzer e display OLED. Um site puro ou uma API orbital trabalham apenas com dados macro; enquanto as previsões meteorológicas operam em escala de quilômetros, a DarkSky Station mede o céu exatamente onde o telescópio está.
+O ESP32 não é um sensor passivo. Ele é o **ponto de convergência entre a inteligência orbital (macro, global) e a inteligência local (no ponto exato de observação)**: mede fisicamente o ambiente onde a observação acontece, publica via MQTT, recebe de volta uma decisão calculada na nuvem e a executa como ação concreta — aciona LED verde/vermelho, buzzer e display OLED para quem está no local. Um site puro ou uma API orbital trabalham apenas com dados macro; enquanto as previsões meteorológicas operam em escala de quilômetros, a DarkSky Station mede o céu exatamente onde o telescópio está.
 
 ---
 
