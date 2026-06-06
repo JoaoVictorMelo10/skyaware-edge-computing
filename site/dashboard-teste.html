@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DarkSky — Estação Edge</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060A12;--bg2:#0C1221;--bg3:#111827;--bg4:#162033;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.11);--border3:rgba(255,255,255,0.18);
+  --text:#E8EDF5;--muted:#5A6A88;--muted2:#8A9BB8;
+  --accent:#4A8FD9;--accent2:#00D4AA;--accent3:#7B6FE8;
+  --green:#00FF88;--red:#FF4560;--amber:#FFB020;--blue:#4A8FD9;
+  --serif:'Playfair Display',Georgia,serif;
+  --sans:'DM Sans',sans-serif;
+  --mono:'DM Mono',monospace;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden}
+.stars{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.star{position:absolute;background:white;border-radius:50%;animation:twinkle var(--dur,3s) ease-in-out infinite var(--delay,0s)}
+@keyframes twinkle{0%,100%{opacity:var(--op,.3)}50%{opacity:.05}}
+#profile-screen{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;animation:fadeIn .4s ease}
+#profile-screen.hidden{display:none}
+.profile-title{font-family:var(--serif);font-size:clamp(1.8rem,4vw,3rem);font-weight:400;text-align:center;margin-bottom:.5rem}
+.profile-title em{font-style:italic;color:rgba(232,237,245,.45)}
+.profile-sub{font-family:var(--mono);font-size:.78rem;color:var(--muted2);letter-spacing:.12em;text-transform:uppercase;text-align:center;margin-bottom:3rem}
+.profile-cards{display:flex;gap:1.25rem;flex-wrap:wrap;justify-content:center;max-width:860px}
+.profile-card{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:2rem 1.75rem;cursor:pointer;flex:1;min-width:220px;max-width:260px;transition:all .25s;position:relative;overflow:hidden}
+.profile-card::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity .25s;background:radial-gradient(ellipse at 50% 0%,rgba(74,143,217,.12),transparent 70%)}
+.profile-card:hover{border-color:var(--border3);transform:translateY(-4px)}
+.profile-card:hover::before{opacity:1}
+.profile-card.amador:hover{border-color:rgba(0,212,170,.4)}
+.profile-card.amador::before{background:radial-gradient(ellipse at 50% 0%,rgba(0,212,170,.1),transparent 70%)}
+.profile-card.fotografo:hover{border-color:rgba(74,143,217,.4)}
+.profile-card.profissional:hover{border-color:rgba(123,111,232,.4)}
+.profile-card.profissional::before{background:radial-gradient(ellipse at 50% 0%,rgba(123,111,232,.1),transparent 70%)}
+.profile-icon{font-size:2.2rem;margin-bottom:1rem}
+.profile-name{font-family:var(--serif);font-size:1.35rem;font-weight:700;margin-bottom:.4rem}
+.profile-desc{font-size:.82rem;color:var(--muted2);line-height:1.5}
+.profile-tags{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:1rem}
+.profile-tag{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:4px;font-family:var(--mono);font-size:.65rem;color:var(--muted2);padding:.2rem .5rem;letter-spacing:.05em}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:1rem 2.5rem;border-bottom:1px solid var(--border);background:rgba(6,10,18,.88);backdrop-filter:blur(16px)}
+.logo{font-family:var(--sans);font-weight:600;font-size:.9rem;letter-spacing:.15em;color:var(--text);text-decoration:none}
+.logo span{color:var(--accent)}
+.nav-right{display:flex;align-items:center;gap:1.25rem}
+.nav-badge{display:flex;align-items:center;gap:.45rem;font-size:.7rem;font-family:var(--mono);color:var(--muted);letter-spacing:.08em}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.profile-switch{background:transparent;border:1px solid var(--border2);border-radius:8px;color:var(--muted2);font-family:var(--mono);font-size:.68rem;padding:.35rem .8rem;cursor:pointer;letter-spacing:.05em;transition:all .2s}
+.profile-switch:hover{border-color:var(--border3);color:var(--text)}
+.profile-indicator{font-family:var(--mono);font-size:.7rem;color:var(--muted);display:flex;align-items:center;gap:.4rem}
+.profile-dot{width:6px;height:6px;border-radius:50%}
+main{position:relative;z-index:1;padding:5.5rem 2.5rem 3rem;max-width:1140px;margin:0 auto}
+.page-header{margin-bottom:2rem;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+.page-header h1{font-family:var(--serif);font-size:clamp(1.6rem,3vw,2.4rem);font-weight:400;line-height:1.2}
+.page-header h1 em{font-style:italic;color:rgba(232,237,245,.4)}
+.section-tag{font-family:var(--mono);font-size:.65rem;letter-spacing:.18em;color:var(--accent);text-transform:uppercase;margin-bottom:.6rem;display:flex;align-items:center;gap:.5rem}
+.section-tag::before{content:'';display:block;width:16px;height:1px;background:var(--accent)}
+.last-update{font-family:var(--mono);font-size:.68rem;color:var(--muted);text-align:right}
+.last-update strong{color:var(--text);display:block;font-family:var(--sans);font-weight:500;margin-bottom:.1rem}
+.location-bar{background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:.875rem 1.25rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:.875rem;flex-wrap:wrap}
+.loc-label{font-family:var(--mono);font-size:.65rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+.city-select{background:var(--bg3);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-family:var(--sans);font-size:.875rem;padding:.4rem .875rem;cursor:pointer;flex:1;min-width:180px}
+.city-select:focus{outline:none;border-color:var(--accent)}
+.city-select option{background:var(--bg3)}
+.gps-btn{background:transparent;border:1px solid var(--border2);border-radius:7px;color:var(--muted);font-family:var(--mono);font-size:.65rem;padding:.4rem .875rem;cursor:pointer;white-space:nowrap;transition:all .2s}
+.gps-btn:hover{border-color:var(--accent);color:var(--accent)}
+.gps-btn.active{border-color:var(--green);color:var(--green)}
+.apply-btn{background:var(--bg4);border:1px solid var(--accent);border-radius:7px;color:var(--accent);font-family:var(--mono);font-size:.65rem;padding:.4rem .875rem;cursor:pointer;white-space:nowrap;transition:all .2s}
+.apply-btn:hover{background:var(--accent);color:var(--bg)}
+.city-name{font-family:var(--mono);font-size:.75rem;color:var(--accent);margin-left:auto}
+.score-hero{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:2rem 2.25rem;margin-bottom:1.25rem;display:grid;grid-template-columns:auto 1fr;gap:2.5rem;align-items:center}
+.score-num{font-family:var(--serif);font-size:5.5rem;font-weight:700;line-height:1;transition:color .5s}
+.score-denom{font-size:2rem;color:var(--muted);font-weight:300;vertical-align:top;margin-top:.4rem;display:inline-block}
+.score-label{font-family:var(--mono);font-size:.65rem;letter-spacing:.15em;margin-bottom:.4rem}
+.score-status{font-size:1rem;font-weight:600;margin-bottom:.875rem;transition:color .5s}
+.score-bar-track{height:3px;background:var(--border2);border-radius:2px;overflow:hidden;max-width:460px}
+.score-bar-fill{height:100%;border-radius:2px;transition:width .8s ease,background .5s}
+.score-meta{margin-top:.75rem;font-family:var(--mono);font-size:.68rem;color:var(--muted);line-height:1.7}
+.see-card{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:1.5rem 1.75rem;margin-bottom:1.25rem}
+.see-title{font-family:var(--mono);font-size:.65rem;letter-spacing:.15em;color:var(--muted);text-transform:uppercase;margin-bottom:1rem}
+.see-objects{display:flex;flex-wrap:wrap;gap:.6rem}
+.see-obj{background:rgba(255,255,255,.04);border:1px solid var(--border2);border-radius:8px;padding:.45rem .875rem;font-size:.8rem;display:flex;align-items:center;gap:.5rem;transition:border-color .2s}
+.see-obj.highlight{border-color:rgba(0,255,136,.25);background:rgba(0,255,136,.04)}
+.see-obj.moderate{border-color:rgba(255,176,32,.2);background:rgba(255,176,32,.03)}
+.see-obj.poor{border-color:rgba(255,69,96,.15);opacity:.5}
+.see-recommendation{margin-top:1rem;padding:.75rem 1rem;background:rgba(74,143,217,.06);border:1px solid rgba(74,143,217,.15);border-radius:8px;font-size:.82rem;color:var(--muted2);line-height:1.5}
+.week-section{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:1.5rem 1.75rem;margin-bottom:1.25rem}
+.week-title{font-family:var(--mono);font-size:.65rem;letter-spacing:.15em;color:var(--muted);text-transform:uppercase;margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between}
+.week-note{font-size:.65rem;color:var(--muted);font-style:italic}
+.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:.625rem}
+.week-day{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.875rem .625rem;text-align:center;transition:border-color .2s}
+.week-day.today{border-color:var(--border3);background:var(--bg4)}
+.week-day-name{font-family:var(--mono);font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem}
+.week-day-date{font-family:var(--mono);font-size:.65rem;color:var(--muted2);margin-bottom:.625rem}
+.week-score{font-family:var(--serif);font-size:1.6rem;font-weight:700;line-height:1;margin-bottom:.3rem;transition:color .4s}
+.week-status-icon{font-size:.9rem;margin-bottom:.3rem}
+.week-cloud{font-family:var(--mono);font-size:.6rem;color:var(--muted)}
+.week-bar{height:2px;background:var(--border);border-radius:1px;margin-top:.5rem;overflow:hidden}
+.week-bar-fill{height:100%;border-radius:1px;transition:width .6s}
+.sensor-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.875rem;margin-bottom:1.25rem}
+.sensor-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.125rem 1.375rem;transition:border-color .2s}
+.sensor-card:hover{border-color:var(--border2)}
+.sensor-icon{font-size:1.1rem;margin-bottom:.625rem;opacity:.55}
+.sensor-val{font-family:var(--serif);font-size:1.6rem;font-weight:700;line-height:1}
+.sensor-unit{font-family:var(--mono);font-size:.7rem;color:var(--muted);margin-left:.15rem}
+.sensor-name{font-family:var(--mono);font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:.2rem}
+.sensor-bar{height:2px;background:var(--border2);border-radius:1px;margin-top:.625rem;overflow:hidden}
+.sensor-bar-fill{height:100%;border-radius:1px;transition:width .7s}
+.api-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.875rem;margin-bottom:1.25rem}
+.api-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.125rem 1.375rem}
+.api-tag{font-family:var(--mono);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:.4rem}
+.api-val{font-family:var(--serif);font-size:1.8rem;font-weight:700}
+.api-label{font-size:.75rem;color:var(--muted2);margin-top:.15rem;line-height:1.4}
+.api-bar{height:2px;background:var(--border2);border-radius:1px;margin-top:.625rem;overflow:hidden}
+.api-bar-fill{height:100%;border-radius:1px;transition:width .7s}
+.sim-panel{background:rgba(255,176,32,.04);border:1px solid rgba(255,176,32,.15);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.25rem}
+.sim-title{font-family:var(--mono);font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);margin-bottom:.875rem;display:flex;align-items:center;gap:.5rem}
+.sim-presets{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.875rem}
+.sim-preset{background:transparent;border:1px solid var(--border2);border-radius:6px;color:var(--muted2);font-family:var(--mono);font-size:.65rem;padding:.3rem .7rem;cursor:pointer;transition:all .2s}
+.sim-preset:hover{border-color:var(--amber);color:var(--amber)}
+.sim-sliders{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.875rem;margin-bottom:.875rem}
+.sim-item label{font-family:var(--mono);font-size:.65rem;color:var(--muted);display:block;margin-bottom:.3rem}
+.sim-item input[type=range]{width:100%;accent-color:var(--amber)}
+.sim-val{color:var(--amber)}
+.sim-actions{display:flex;gap:.625rem}
+.sim-btn{background:transparent;border:1px solid var(--amber);border-radius:7px;color:var(--amber);font-family:var(--mono);font-size:.7rem;padding:.45rem .875rem;cursor:pointer;transition:all .2s}
+.sim-btn:hover{background:rgba(255,176,32,.08)}
+.sim-btn.reset{border-color:var(--muted);color:var(--muted)}
+.sim-btn.reset:hover{background:rgba(255,255,255,.04)}
+.status-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.875rem;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:.875rem 1.25rem}
+.status-item{display:flex;align-items:center;gap:.5rem;font-family:var(--mono);font-size:.68rem;color:var(--muted)}
+.status-dot{width:5px;height:5px;border-radius:50%}
+.status-dot.ok{background:var(--green)}
+.corte-banner{background:rgba(255,69,96,.07);border:1px solid rgba(255,69,96,.2);border-radius:10px;padding:.875rem 1.25rem;margin-bottom:1.25rem;font-family:var(--mono);font-size:.75rem;color:var(--red);display:none}
+.sec-label{margin-bottom:.5rem;font-family:var(--mono);font-size:.62rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
+.hidden{display:none!important}
+.fade-in{animation:fadeIn .5s ease forwards}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.profile-amador .live-dot,.profile-amador .profile-dot{background:var(--accent2)}
+.profile-fotografo .live-dot,.profile-fotografo .profile-dot{background:var(--blue)}
+.profile-profissional .live-dot,.profile-profissional .profile-dot{background:var(--accent3)}
+@media(max-width:760px){nav{padding:.875rem 1.25rem}main{padding:5rem 1.25rem 2.5rem}.score-hero{grid-template-columns:1fr;gap:1.25rem}.week-grid{grid-template-columns:repeat(4,1fr)}.page-header{flex-direction:column;align-items:flex-start}}
+@media(max-width:480px){.week-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<div id="profile-screen">
+  <p class="section-tag" style="justify-content:center">DarkSky · Edge Computing</p>
+  <h1 class="profile-title">Como você<br><em>observa o céu?</em></h1>
+  <p class="profile-sub">Selecione seu perfil para uma experiência personalizada</p>
+  <div class="profile-cards">
+    <div class="profile-card amador" onclick="selectProfile('amador')">
+      <div class="profile-icon">🔭</div>
+      <div class="profile-name">Astrônomo Amador</div>
+      <div class="profile-desc">Quer saber simplesmente: vale a pena sair essa noite?</div>
+      <div class="profile-tags"><span class="profile-tag">Score geral</span><span class="profile-tag">Previsão semanal</span><span class="profile-tag">O que ver</span></div>
+    </div>
+    <div class="profile-card fotografo" onclick="selectProfile('fotografo')">
+      <div class="profile-icon">📷</div>
+      <div class="profile-name">Astrofotógrafo</div>
+      <div class="profile-desc">Precisa de janelas limpas, sem rastros e com seeing estável.</div>
+      <div class="profile-tags"><span class="profile-tag">Risco de rastros</span><span class="profile-tag">Seeing</span><span class="profile-tag">Melhores noites</span></div>
+    </div>
+    <div class="profile-card profissional" onclick="selectProfile('profissional')">
+      <div class="profile-icon">🛰️</div>
+      <div class="profile-name">Observatório</div>
+      <div class="profile-desc">Quer controle total sobre todos os dados e métricas.</div>
+      <div class="profile-tags"><span class="profile-tag">Dados completos</span><span class="profile-tag">Fórmula</span><span class="profile-tag">Simulação</span></div>
+    </div>
+  </div>
+</div>
+
+<nav id="main-nav" class="hidden">
+  <a class="logo" href="#"><span>DARK</span>SKY</a>
+  <div class="nav-right">
+    <div class="profile-indicator" id="profile-indicator">
+      <div class="profile-dot"></div>
+      <span id="profile-name-nav">—</span>
+    </div>
+    <div class="nav-badge"><div class="live-dot"></div>AO VIVO</div>
+    <button class="profile-switch" onclick="switchProfile()">Trocar perfil</button>
+  </div>
+</nav>
+
+<main id="main-content" class="hidden">
+
+  <div class="page-header">
+    <div>
+      <div class="section-tag" id="page-tag">ESP32 · FIWARE · MQTT</div>
+      <h1>Estação local<br><em id="page-subtitle">ao vivo.</em></h1>
+    </div>
+    <div class="last-update">
+      <strong id="last-time">—</strong>
+      última atualização
+    </div>
+  </div>
+
+  <div class="location-bar">
+    <span class="loc-label">📍</span>
+    <select class="city-select" id="city-select" onchange="onCityChange()">
+      <option value="sao_paulo" data-lat="-23.5505" data-lon="-46.6333">São Paulo, SP</option>
+      <option value="rio_de_janeiro" data-lat="-22.9068" data-lon="-43.1729">Rio de Janeiro, RJ</option>
+      <option value="belo_horizonte" data-lat="-19.9191" data-lon="-43.9386">Belo Horizonte, MG</option>
+      <option value="brasilia" data-lat="-15.7801" data-lon="-47.9292">Brasília, DF</option>
+      <option value="curitiba" data-lat="-25.4284" data-lon="-49.2733">Curitiba, PR</option>
+      <option value="porto_alegre" data-lat="-30.0346" data-lon="-51.2177">Porto Alegre, RS</option>
+      <option value="salvador" data-lat="-12.9714" data-lon="-38.5014">Salvador, BA</option>
+      <option value="campinas" data-lat="-22.9099" data-lon="-47.0626">Campinas, SP</option>
+      <option value="interior" data-lat="-22.3154" data-lon="-49.0609">Interior (Bauru, SP)</option>
+    </select>
+    <button class="gps-btn" id="gps-btn" onclick="useGPS()">📡 Minha localização</button>
+    <span class="city-name" id="city-name-display">São Paulo, SP</span>
+  </div>
+
+  <div class="corte-banner" id="corte-banner"></div>
+
+  <div class="score-hero fade-in">
+    <div>
+      <div class="score-label">SKY OBSERVATION SCORE</div>
+      <div>
+        <span class="score-num" id="score-num">—</span>
+        <span class="score-denom">/10</span>
+      </div>
+    </div>
+    <div>
+      <div class="score-status" id="score-status">Carregando...</div>
+      <div class="score-bar-track"><div class="score-bar-fill" id="score-bar" style="width:0%"></div></div>
+      <div class="score-meta" id="score-meta"></div>
+    </div>
+  </div>
+
+  <div class="see-card fade-in">
+    <div class="see-title" id="see-title">O QUE É POSSÍVEL OBSERVAR AGORA</div>
+    <div class="see-objects" id="see-objects"></div>
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:.75rem;margin-bottom:.5rem">
+      <span style="font-family:var(--mono);font-size:.62rem;color:var(--muted);display:flex;align-items:center;gap:.4rem"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:rgba(0,255,136,.25);border:1px solid rgba(0,255,136,.5)"></span> Ótimas condições</span>
+      <span style="font-family:var(--mono);font-size:.62rem;color:var(--muted);display:flex;align-items:center;gap:.4rem"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:rgba(255,176,32,.2);border:1px solid rgba(255,176,32,.4)"></span> Condições moderadas</span>
+      <span style="font-family:var(--mono);font-size:.62rem;color:var(--muted);display:flex;align-items:center;gap:.4rem"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:rgba(255,69,96,.1);border:1px solid rgba(255,69,96,.2);opacity:.5"></span> Difícil / não recomendado</span>
+    </div>
+    <div class="see-recommendation" id="see-recommendation"></div>
+  </div>
+
+  <div class="week-section fade-in">
+    <div class="week-title">
+      <span>PREVISÃO DA SEMANA</span>
+      <span class="week-note">N2YO · nuvens via Open-Meteo</span>
+    </div>
+    <div class="week-grid" id="week-grid"></div>
+  </div>
+
+  <div id="foto-section" class="hidden">
+    <div class="sec-label">Análise para Astrofotografia</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.875rem;margin-bottom:1.25rem" class="fade-in">
+      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:1.25rem 1.5rem">
+        <div style="font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:.5rem">N2YO · Risco de Rastros Starlink</div>
+        <div id="foto-rastros-val" style="font-family:var(--serif);font-size:1.6rem;font-weight:700;color:var(--green)">—</div>
+        <div id="foto-rastros-label" style="font-size:.8rem;color:var(--muted2);margin-top:.25rem;line-height:1.5">Calculando...</div>
+        <div style="height:2px;background:var(--border2);border-radius:1px;margin-top:.75rem;overflow:hidden"><div id="foto-rastros-bar" style="height:100%;border-radius:1px;transition:width .7s;background:var(--green)"></div></div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:1.5rem 1.75rem">
+        <div style="font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:.5rem">DHT22 · Seeing Atmosférico</div>
+        <div id="foto-seeing-val" style="font-family:var(--serif);font-size:1.6rem;font-weight:700">—</div>
+        <div id="foto-seeing-label" style="font-size:.8rem;color:var(--muted2);margin-top:.25rem;line-height:1.5">Calculando...</div>
+        <div style="height:2px;background:var(--border2);border-radius:1px;margin-top:.75rem;overflow:hidden"><div id="foto-seeing-bar" style="height:100%;border-radius:1px;transition:width .7s"></div></div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:1.5rem 1.75rem">
+        <div style="font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:.5rem">Open-Meteo · Melhor Janela</div>
+        <div id="foto-window-val" style="font-family:var(--serif);font-size:1.3rem;font-weight:700;color:var(--accent2)">—</div>
+        <div id="foto-window-label" style="font-size:.8rem;color:var(--muted2);margin-top:.25rem;line-height:1.5">Calculando melhor horário...</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:1.5rem 1.75rem">
+        <div style="font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:.5rem">Score · Longa Exposição</div>
+        <div id="foto-exp-val" style="font-family:var(--serif);font-size:1.6rem;font-weight:700">—</div>
+        <div id="foto-exp-label" style="font-size:.8rem;color:var(--muted2);margin-top:.25rem;line-height:1.5">Qualidade para longa exposição</div>
+        <div style="height:2px;background:var(--border2);border-radius:1px;margin-top:.75rem;overflow:hidden"><div id="foto-exp-bar" style="height:100%;border-radius:1px;transition:width .7s"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="sensors-section" class="hidden">
+    <div class="sec-label">Sensores ESP32 — dados físicos locais</div>
+    <div class="sensor-grid fade-in">
+      <div class="sensor-card"><div class="sensor-icon">🌡</div><div><span class="sensor-val" id="s-temp">—</span><span class="sensor-unit">°C</span></div><div class="sensor-name">Temperatura</div><div class="sensor-bar"><div class="sensor-bar-fill" id="sb-temp" style="background:var(--accent)"></div></div></div>
+      <div class="sensor-card"><div class="sensor-icon">💧</div><div><span class="sensor-val" id="s-hum">—</span><span class="sensor-unit">%</span></div><div class="sensor-name">Umidade</div><div class="sensor-bar"><div class="sensor-bar-fill" id="sb-hum" style="background:var(--accent2)"></div></div></div>
+      <div class="sensor-card"><div class="sensor-icon">📊</div><div><span class="sensor-val" id="s-press">—</span><span class="sensor-unit">hPa</span></div><div class="sensor-name">Pressão</div><div class="sensor-bar"><div class="sensor-bar-fill" id="sb-press" style="background:var(--accent)"></div></div></div>
+      <div class="sensor-card"><div class="sensor-icon">🌑</div><div><span class="sensor-val" id="s-dark">—</span><span class="sensor-unit">%</span></div><div class="sensor-name">Escuridão local</div><div class="sensor-bar"><div class="sensor-bar-fill" id="sb-dark"></div></div></div>
+    </div>
+  </div>
+
+  <div id="api-section" class="hidden">
+    <div class="sec-label">APIs orbitais e ambientais</div>
+    <div class="api-grid fade-in">
+      <div class="api-card">
+        <div class="api-tag">N2YO · f_orbital (Starlink)</div>
+        <div class="api-val" id="a-orbital" style="color:var(--accent)">—</div>
+        <div class="api-label" id="a-orbital-label">Satélites sobre o observador</div>
+        <div class="api-bar"><div class="api-bar-fill" id="ab-orbital" style="background:var(--accent)"></div></div>
+      </div>
+      <div class="api-card">
+        <div class="api-tag">Open-Meteo · M_atm</div>
+        <div class="api-val" id="a-cloud">—</div>
+        <div class="api-label" id="a-cloud-label">Cobertura de nuvens</div>
+        <div class="api-bar"><div class="api-bar-fill" id="ab-cloud"></div></div>
+      </div>
+      <div class="api-card">
+        <div class="api-tag">Bortle Scale · M_lum</div>
+        <div class="api-val" id="a-polv" style="color:var(--amber)">—</div>
+        <div class="api-label" id="a-polv-label">Poluição luminosa</div>
+        <div class="api-bar"><div class="api-bar-fill" id="ab-polv" style="background:var(--amber)"></div></div>
+      </div>
+      <div class="api-card">
+        <div class="api-tag">ESP32 · f_local</div>
+        <div class="api-val" id="a-local" style="color:var(--accent2)">—</div>
+        <div class="api-label">Fator local combinado<br>Hum + Press + LDR</div>
+        <div class="api-bar"><div class="api-bar-fill" id="ab-local" style="background:var(--accent2)"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="formula-section" class="hidden">
+    <div class="sec-label">Fórmula híbrida</div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.25rem;font-family:var(--mono);font-size:.75rem;color:var(--muted2);line-height:2">
+      <span style="color:var(--text)">Score = B × M_atm × M_lum × 10</span><br>
+      <span style="color:var(--muted)">B = (f_orbital × 0.7) + (f_local × 0.3)</span><br>
+      <span style="color:var(--muted)">M_atm = 1 − cobertura_nuvens</span><br>
+      <span style="color:var(--muted)">M_lum = 1 − (polv_luminosa × 0.5)</span><br>
+      <span id="formula-live" style="color:var(--accent);margin-top:.25rem;display:block"></span>
+    </div>
+  </div>
+
+  <div id="history-section" class="hidden">
+    <div class="sec-label">Histórico — Sky Observation Score</div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.25rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+        <span style="font-family:var(--mono);font-size:.65rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase">SQLite · evolução do score na sessão</span>
+        <span id="hist-count" style="font-family:var(--mono);font-size:.65rem;color:var(--muted2)">—</span>
+      </div>
+      <canvas id="hist-chart" height="90"></canvas>
+    </div>
+  </div>
+
+  <div id="sim-section">
+    <div class="sim-panel">
+      <div class="sim-title">⚗ Modo Simulação</div>
+      <div class="sim-presets">
+        <button class="sim-preset" onclick="applyPreset('ideal')">🌟 Céu Ideal</button>
+        <button class="sim-preset" onclick="applyPreset('moderado')">🌤 Moderado</button>
+        <button class="sim-preset" onclick="applyPreset('nublado')">☁ Nublado</button>
+        <button class="sim-preset" onclick="applyPreset('corte')">🚫 Corte Total</button>
+        <button class="sim-preset" onclick="applyPreset('deserto')">🌌 Deserto</button>
+      </div>
+      <div class="sim-sliders">
+        <div class="sim-item"><label>Nuvens: <span class="sim-val" id="sv-cloud">20%</span></label><input type="range" min="0" max="100" value="20" id="si-cloud" oninput="document.getElementById('sv-cloud').textContent=this.value+'%'"></div>
+        <div class="sim-item"><label>Poluição: <span class="sim-val" id="sv-polv">75%</span></label><input type="range" min="0" max="100" value="75" id="si-polv" oninput="document.getElementById('sv-polv').textContent=this.value+'%'"></div>
+        <div class="sim-item"><label>Orbital: <span class="sim-val" id="sv-orb">0.70</span></label><input type="range" min="0" max="100" value="70" id="si-orb" oninput="document.getElementById('sv-orb').textContent=(this.value/100).toFixed(2)"></div>
+      </div>
+      <div class="sim-actions">
+        <button class="sim-btn" onclick="applySimulation()">▶ Aplicar</button>
+        <button class="sim-btn reset" onclick="resetSimulation()">↺ Dados reais</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-row fade-in">
+    <div class="status-item"><div class="status-dot ok"></div>FIWARE ORION</div>
+    <div class="status-item"><div class="status-dot ok"></div>FLASK · :5000</div>
+    <div class="status-item"><div class="status-dot ok"></div>ESP32 WOKWI</div>
+    <div class="status-item"><div class="status-dot ok"></div>N2YO · STARLINK</div>
+    <div class="status-item"><div class="status-dot ok"></div>OPEN-METEO</div>
+    <div class="status-item" style="margin-left:auto;color:var(--muted)">↺ 5s</div>
+  </div>
+
+</main>
+
+<script>
+const API = 'https://darksky-fiap.duckdns.org';
+let currentProfile = null;
+let currentCity = { key:'sao_paulo', name:'São Paulo, SP', lat:-23.5505, lon:-46.6333 };
+let weekData = [];
+let lastScore = null;
+let lastOrbital = 0.70;
+
+// ── STARS ──
+const stEl = document.getElementById('stars');
+for(let i=0;i<100;i++){
+  const s=document.createElement('div'); s.className='star';
+  const sz=Math.random()*1.8+.4;
+  s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--op:${Math.random()*.4+.08};--dur:${Math.random()*4+2}s;--delay:-${Math.random()*6}s`;
+  stEl.appendChild(s);
+}
+
+// ── PROFILE ──
+const PROFILES = {
+  amador:       { name:'Astrônomo Amador', color:'var(--accent2)', tag:'ESP32 · FIWARE · Open-Meteo', subtitle:'ao vivo.' },
+  fotografo:    { name:'Astrofotógrafo',   color:'var(--blue)',    tag:'ESP32 · FIWARE · N2YO Starlink', subtitle:'condições para longa exposição.' },
+  profissional: { name:'Observatório',     color:'var(--accent3)', tag:'ESP32 · FIWARE · dados completos', subtitle:'controle total.' }
+};
+
+async function selectProfile(p) {
+  currentProfile = p;
+  localStorage.setItem('darksky_profile', p);
+  document.getElementById('profile-screen').classList.add('hidden');
+  document.getElementById('main-nav').classList.remove('hidden');
+  document.getElementById('main-content').classList.remove('hidden');
+  const prof = PROFILES[p];
+  document.body.className = `profile-${p}`;
+  document.getElementById('profile-name-nav').textContent = prof.name;
+  document.getElementById('page-tag').textContent = prof.tag;
+  document.getElementById('page-subtitle').textContent = prof.subtitle;
+  document.getElementById('sensors-section').classList.toggle('hidden', p === 'amador');
+  document.getElementById('foto-section').classList.toggle('hidden', p !== 'fotografo');
+  document.getElementById('api-section').classList.toggle('hidden', p !== 'profissional');
+  document.getElementById('formula-section').classList.toggle('hidden', p !== 'profissional');
+  document.getElementById('history-section').classList.toggle('hidden', p !== 'profissional');
+  if(localStorage.getItem('darksky_city')) {
+    await updateLocation();
+  } else {
+    fetchData();
+    fetchWeek();
+  }
+  if(currentProfile === 'profissional') fetchHistory();
+}
+
+function switchProfile() {
+  currentProfile = null;
+  document.getElementById('profile-screen').classList.remove('hidden');
+  document.getElementById('main-nav').classList.add('hidden');
+  document.getElementById('main-content').classList.add('hidden');
+}
+
+// ── COLOR HELPERS ──
+function scoreColor(s){ return s>=7?'var(--green)':s>=4?'var(--amber)':'var(--red)'; }
+function scoreIcon(s){ return s>=7?'⭐':s>=4?'🌤':'☁'; }
+
+// ── WHAT CAN YOU SEE ──
+function getObservationData(score, profile) {
+  const objects = [];
+  const s = score;
+  if(s>=8){objects.push({icon:'🌌',name:'Via Láctea',quality:'highlight'},{icon:'🔭',name:'Nebulosas difusas',quality:'highlight'},{icon:'⭐',name:'Aglomerados globulares',quality:'highlight'},{icon:'🌟',name:'Galáxias próximas',quality:'highlight'},{icon:'🪐',name:'Planetas',quality:'highlight'},{icon:'🌙',name:'Lua (detalhes)',quality:'highlight'});}
+  else if(s>=6){objects.push({icon:'🪐',name:'Planetas (excelente)',quality:'highlight'},{icon:'🌙',name:'Lua',quality:'highlight'},{icon:'⭐',name:'Estrelas duplas',quality:'highlight'},{icon:'🌌',name:'Via Láctea (parcial)',quality:'moderate'},{icon:'🔭',name:'Nebulosas brilhantes',quality:'moderate'},{icon:'🌟',name:'Galáxias (difícil)',quality:'poor'});}
+  else if(s>=4){objects.push({icon:'🪐',name:'Planetas',quality:'highlight'},{icon:'🌙',name:'Lua',quality:'highlight'},{icon:'⭐',name:'Estrelas brilhantes',quality:'moderate'},{icon:'🔭',name:'Nebulosas brilhantes',quality:'poor'});}
+  else if(s>=1){objects.push({icon:'🌙',name:'Lua',quality:'moderate'},{icon:'🪐',name:'Planetas brilhantes',quality:'moderate'},{icon:'⭐',name:'Estrelas mais brilhantes',quality:'poor'});}
+  else{objects.push({icon:'☁',name:'Céu encoberto — observação inviável',quality:'poor'});}
+  let rec='';
+  if(s>=8) rec=profile==='fotografo'?'🎯 Noite excelente para longa exposição. Nebulosidades e galáxias com baixo risco de rastros.':'🌟 Condições excepcionais. Aproveite para observar objetos de céu profundo.';
+  else if(s>=6) rec=profile==='fotografo'?'📷 Boa janela para planetária e objetos brilhantes. Evite nebulosidades difusas.':'🔭 Boa noite para planetas e objetos do sistema solar.';
+  else if(s>=4) rec='🌤 Condições moderadas. Planetas e Lua são os alvos ideais esta noite.';
+  else if(s>=1) rec='⚠ Condições ruins. Apenas objetos muito brilhantes são visíveis.';
+  else rec='🚫 Céu bloqueado. Aguarde uma janela de melhora na previsão semanal.';
+  return {objects,rec};
+}
+
+// ── RENDER FOTO SECTION ──
+function renderFotoSection(d) {
+  if(currentProfile!=='fotografo') return;
+  const orb=d.fatorOrbital??0.70, hum=d.umidade??60, score=d.skyScore??0;
+  let rastrosLabel,rastrosColor,rastrosWidth;
+  if(orb>=0.75){rastrosLabel='Baixo risco · Poucas passagens de satélites previstas';rastrosColor='var(--green)';rastrosWidth=90;}
+  else if(orb>=0.5){rastrosLabel='Risco moderado · Alguns satélites podem aparecer';rastrosColor='var(--amber)';rastrosWidth=55;}
+  else{rastrosLabel='Alto risco · Muitos satélites Starlink passando';rastrosColor='var(--red)';rastrosWidth=20;}
+  const rastrosText=orb>=0.75?'BAIXO':orb>=0.5?'MODERADO':'ALTO';
+  document.getElementById('foto-rastros-val').textContent=rastrosText;
+  document.getElementById('foto-rastros-val').style.color=rastrosColor;
+  document.getElementById('foto-rastros-label').textContent=rastrosLabel;
+  document.getElementById('foto-rastros-bar').style.width=rastrosWidth+'%';
+  document.getElementById('foto-rastros-bar').style.background=rastrosColor;
+  let seeingText,seeingColor,seeingWidth,seeingLabel;
+  if(hum<40){seeingText='EXCELENTE';seeingColor='var(--green)';seeingWidth=95;seeingLabel='Ar seco e estável · Imagens nítidas esperadas';}
+  else if(hum<60){seeingText='BOM';seeingColor='var(--accent2)';seeingWidth=75;seeingLabel='Umidade moderada · Boas condições para planetária';}
+  else if(hum<75){seeingText='MODERADO';seeingColor='var(--amber)';seeingWidth=50;seeingLabel='Umidade elevada · Turbulência atmosférica possível';}
+  else{seeingText='RUIM';seeingColor='var(--red)';seeingWidth=20;seeingLabel='Umidade muito alta · Evite longa exposição';}
+  document.getElementById('foto-seeing-val').textContent=seeingText;
+  document.getElementById('foto-seeing-val').style.color=seeingColor;
+  document.getElementById('foto-seeing-label').textContent=seeingLabel;
+  document.getElementById('foto-seeing-bar').style.width=seeingWidth+'%';
+  document.getElementById('foto-seeing-bar').style.background=seeingColor;
+  const expScore=score>=7?'IDEAL':score>=5?'ACEITÁVEL':score>=3?'LIMITADO':'INVIÁVEL';
+  const expColor=scoreColor(score);
+  const expLabel=score>=7?'Excelente para nebulosas, galáxias e campo amplo':score>=5?'Adequado para planetária e objetos brilhantes':score>=3?'Apenas objetos muito brilhantes':'Aguarde janela melhor na previsão semanal';
+  document.getElementById('foto-exp-val').textContent=expScore;
+  document.getElementById('foto-exp-val').style.color=expColor;
+  document.getElementById('foto-exp-label').textContent=expLabel;
+  document.getElementById('foto-exp-bar').style.width=`${score*10}%`;
+  document.getElementById('foto-exp-bar').style.background=expColor;
+}
+
+function updateBestWindow() {
+  if(currentProfile!=='fotografo'||!weekData.length) return;
+  const best=weekData.reduce((a,b)=>b.score>a.score?b:a);
+  const isToday=weekData.indexOf(best)===0;
+  document.getElementById('foto-window-val').textContent=isToday?'Esta noite':best.day+' '+best.dateStr;
+  document.getElementById('foto-window-label').textContent=`Score projetado: ${best.score.toFixed(1)} · ${best.cloud}% nuvens · Melhor noite da semana`;
+}
+
+// ── RENDER SCORE ──
+function renderScore(d) {
+  const score=d.skyScore??0, color=scoreColor(score), corte=d.corteAtivo??false;
+  lastScore=score;
+  document.getElementById('last-time').textContent=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const banner=document.getElementById('corte-banner');
+  if(corte){banner.style.display='block';banner.textContent=`⚠ ${d.corteMotivo} — observação inviável no momento`;}
+  else{banner.style.display='none';}
+  const numEl=document.getElementById('score-num');
+  numEl.textContent=score.toFixed(1); numEl.style.color=color;
+  const statusEl=document.getElementById('score-status');
+  statusEl.style.color=color;
+  if(corte) statusEl.textContent=`⚠ PORTÃO DE CORTE — ${d.corteMotivo}`;
+  else if(score>=7) statusEl.textContent='● JANELA IDEAL DE OBSERVAÇÃO';
+  else if(score>=4) statusEl.textContent='● CONDIÇÕES MODERADAS';
+  else statusEl.textContent='● CÉU DESFAVORÁVEL';
+  document.getElementById('score-bar').style.width=`${score*10}%`;
+  document.getElementById('score-bar').style.background=color;
+  const meta=document.getElementById('score-meta');
+  if(currentProfile==='profissional'){
+    meta.innerHTML=`Score = B × M_atm × M_lum × 10 &nbsp;|&nbsp; B=${(d.base??0).toFixed(3)} · M_atm=${(d.multiplicadorAtm??0).toFixed(3)} · M_lum=${(d.multiplicadorLum??0).toFixed(3)}`;
+    document.getElementById('formula-live').textContent=`Score = ${(d.base??0).toFixed(3)} × ${(d.multiplicadorAtm??0).toFixed(3)} × ${(d.multiplicadorLum??0).toFixed(3)} × 10 = ${score.toFixed(1)}`;
+  } else if(currentProfile==='fotografo'){
+    const rastros=(d.fatorOrbital??0)>0.7?'Baixo':(d.fatorOrbital??0)>0.4?'Moderado':'Alto';
+    const seeing=(d.umidade??60)<50?'Bom':(d.umidade??60)<70?'Moderado':'Ruim';
+    meta.innerHTML=`Risco de rastros: ${rastros} &nbsp;·&nbsp; Seeing: ${seeing} &nbsp;·&nbsp; Umidade: ${(d.umidade??0).toFixed(0)}%`;
+  } else { meta.textContent=''; }
+  const obs=getObservationData(score,currentProfile);
+  document.getElementById('see-objects').innerHTML=obs.objects.map(o=>`<div class="see-obj ${o.quality}">${o.icon} ${o.name}</div>`).join('');
+  document.getElementById('see-recommendation').textContent=obs.rec;
+  renderFotoSection(d);
+  if(currentProfile==='fotografo') document.getElementById('see-title').textContent='JANELA PARA ASTROFOTOGRAFIA';
+  else if(currentProfile==='profissional') document.getElementById('see-title').textContent='OBJETOS OBSERVÁVEIS — ANÁLISE TÉCNICA';
+  if(currentProfile!=='amador'){
+    document.getElementById('s-temp').textContent=(d.temperatura??0).toFixed(1);
+    document.getElementById('s-hum').textContent=(d.umidade??0).toFixed(1);
+    document.getElementById('s-press').textContent=(d.pressao??0).toFixed(0);
+    const dark=((4095-(d.ldrRaw??2048))/4095*100).toFixed(0);
+    document.getElementById('s-dark').textContent=dark;
+    document.getElementById('sb-temp').style.width=`${Math.min((d.temperatura??0)/50*100,100)}%`;
+    document.getElementById('sb-hum').style.width=`${d.umidade??0}%`;
+    document.getElementById('sb-hum').style.background=(d.umidade??0)>80?'var(--red)':(d.umidade??0)>60?'var(--amber)':'var(--accent2)';
+    document.getElementById('sb-press').style.width=`${Math.min(((d.pressao??1013)-950)/80*100,100)}%`;
+    document.getElementById('sb-dark').style.width=`${dark}%`;
+    document.getElementById('sb-dark').style.background=dark>70?'var(--green)':'var(--amber)';
+  }
+  if(currentProfile==='profissional'){
+    const orb=d.fatorOrbital??0, cloud=d.coberturaNuvens??0, polv=d.polvLuminosa??0, local=d.fatorLocal??0;
+    lastOrbital=orb;
+    const orbPct=Math.round(orb*100);
+    const orbLabel=orb>=0.75?'Excelente':orb>=0.55?'Moderado':'Saturado';
+    const orbColor=orb>=0.75?'var(--green)':orb>=0.55?'var(--amber)':'var(--red)';
+    document.getElementById('a-orbital').textContent=orbPct+'%';
+    document.getElementById('a-orbital').style.color=orbColor;
+    document.getElementById('a-orbital-label').innerHTML=`Qualidade orbital · ${orbLabel}<br>Starlink sobre o observador (N2YO)`;
+    document.getElementById('ab-orbital').style.width=`${orbPct}%`;
+    document.getElementById('ab-orbital').style.background=orbColor;
+    document.getElementById('a-cloud').textContent=cloud.toFixed(0)+'%';
+    document.getElementById('a-cloud').style.color=cloud>=85?'var(--red)':cloud>50?'var(--amber)':'var(--green)';
+    document.getElementById('a-cloud-label').innerHTML=`Cobertura de nuvens<br>M_atm = ${(d.multiplicadorAtm??0).toFixed(3)}`;
+    document.getElementById('ab-cloud').style.width=`${cloud}%`;
+    document.getElementById('ab-cloud').style.background=cloud>=85?'var(--red)':cloud>50?'var(--amber)':'var(--green)';
+    document.getElementById('a-polv').textContent=polv.toFixed(0)+'%';
+    document.getElementById('a-polv-label').innerHTML=`Poluição luminosa<br>M_lum = ${(d.multiplicadorLum??0).toFixed(3)}`;
+    document.getElementById('ab-polv').style.width=`${polv}%`;
+    document.getElementById('a-local').textContent=local.toFixed(3);
+    document.getElementById('ab-local').style.width=`${local*100}%`;
+  }
+}
+
+// ── WEEK FORECAST ──
+const DAYS_PT=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+async function fetchWeek() {
+  try {
+    const url=`https://api.open-meteo.com/v1/forecast?latitude=${currentCity.lat}&longitude=${currentCity.lon}&daily=cloud_cover_mean&forecast_days=7&timezone=America/Sao_Paulo`;
+    const r=await fetch(url); if(!r.ok) return;
+    const data=await r.json();
+    const days=data.daily.time, clouds=data.daily.cloud_cover_mean;
+    const fOrb=lastOrbital;
+    weekData=days.map((d,i)=>{
+      const c=clouds[i], m_atm=1-c/100, m_lum=1-0.75*0.5, base=fOrb*0.7+0.5*0.3;
+      const proj=c>=85?0:Math.round(base*m_atm*m_lum*10*10)/10;
+      const date=new Date(d+'T12:00:00');
+      return{date,day:DAYS_PT[date.getDay()],dateStr:`${date.getDate()}/${date.getMonth()+1}`,cloud:c,score:proj};
+    });
+    renderWeek(); updateBestWindow();
+  } catch(e){console.error('Week forecast error:',e);}
+}
+
+function renderWeek() {
+  const grid=document.getElementById('week-grid'); if(!grid) return;
+  grid.innerHTML=weekData.map((d,i)=>{
+    const isToday=i===0, color=scoreColor(d.score);
+    return `<div class="week-day ${isToday?'today':''}"><div class="week-day-name">${isToday?'HOJE':d.day}</div><div class="week-day-date">${d.dateStr}</div><div class="week-status-icon">${scoreIcon(d.score)}</div><div class="week-score" style="color:${color}">${d.score.toFixed(1)}</div><div class="week-cloud">${d.cloud}% nuvens</div><div class="week-bar"><div class="week-bar-fill" style="width:${d.score*10}%;background:${color}"></div></div></div>`;
+  }).join('');
+}
+
+// ── LOCATION & PERSISTENCE ──
+function onCityChange() {
+  const sel=document.getElementById('city-select');
+  const opt=sel.options[sel.selectedIndex];
+  currentCity={key:sel.value,name:opt.text,lat:parseFloat(opt.dataset.lat),lon:parseFloat(opt.dataset.lon)};
+  document.getElementById('city-name-display').textContent=currentCity.name;
+  document.getElementById('gps-btn').className='gps-btn';
+  localStorage.setItem('darksky_city',JSON.stringify(currentCity));
+  updateLocation();
+}
+
+function useGPS() {
+  navigator.geolocation.getCurrentPosition(pos=>{
+    currentCity={key:'custom',name:'Sua localização',lat:pos.coords.latitude,lon:pos.coords.longitude};
+    document.getElementById('gps-btn').className='gps-btn active';
+    document.getElementById('city-name-display').textContent='GPS ativo';
+    localStorage.setItem('darksky_city',JSON.stringify(currentCity));
+    updateLocation();
+  },()=>alert('Permissão de localização negada.'));
+}
+
+function restoreCity() {
+  const savedCity=localStorage.getItem('darksky_city');
+  if(!savedCity) return;
+  try {
+    currentCity=JSON.parse(savedCity);
+    const sel=document.getElementById('city-select');
+    if(sel&&currentCity.key!=='custom') sel.value=currentCity.key;
+    document.getElementById('city-name-display').textContent=currentCity.name;
+    if(currentCity.key==='custom') document.getElementById('gps-btn').className='gps-btn active';
+  } catch(e){}
+}
+
+async function updateLocation() {
+  try {
+    await fetch(`${API}/location`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lat:currentCity.lat,lon:currentCity.lon,city:currentCity.name,city_key:currentCity.key})});
+    // Aguarda o backend recalcular nuvens e poluição antes de buscar o score
+    await new Promise(r => setTimeout(r, 800));
+    fetchData(); fetchWeek();
+  } catch(e){}
+}
+
+// ── SIMULATION ──
+const PRESETS={ideal:{cloud:5,polv:10,orb:90},moderado:{cloud:40,polv:50,orb:65},nublado:{cloud:75,polv:60,orb:50},corte:{cloud:90,polv:75,orb:40},deserto:{cloud:2,polv:5,orb:95}};
+function applyPreset(n){
+  const p=PRESETS[n];
+  document.getElementById('si-cloud').value=p.cloud; document.getElementById('sv-cloud').textContent=p.cloud+'%';
+  document.getElementById('si-polv').value=p.polv;   document.getElementById('sv-polv').textContent=p.polv+'%';
+  document.getElementById('si-orb').value=p.orb;     document.getElementById('sv-orb').textContent=(p.orb/100).toFixed(2);
+  applySimulation();
+}
+async function applySimulation(){
+  const c=parseInt(document.getElementById('si-cloud').value);
+  const p=parseInt(document.getElementById('si-polv').value);
+  const o=parseInt(document.getElementById('si-orb').value)/100;
+  await fetch(`${API}/simulate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({coberturaNuvens:c,polvLuminosa:p,fatorOrbital:o})});
+  fetchData();
+}
+async function resetSimulation(){
+  await fetch(`${API}/simulate/reset`,{method:'POST'});
+  document.getElementById('si-cloud').value=20; document.getElementById('sv-cloud').textContent='20%';
+  document.getElementById('si-polv').value=75;  document.getElementById('sv-polv').textContent='75%';
+  document.getElementById('si-orb').value=70;   document.getElementById('sv-orb').textContent='0.70';
+  fetchData();
+}
+
+// ── HISTORY CHART ──
+let _histChart=null;
+async function fetchHistory(){
+  if(currentProfile!=='profissional') return;
+  try {
+    const r=await fetch(`${API}/history?limit=200`); if(!r.ok) return;
+    const d=await r.json(); if(!d.index||!d.index.length) return;
+    document.getElementById('hist-count').textContent=`${d.index.length} pontos`;
+    const labels=d.index.map(t=>{const dt=new Date(t);return dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});});
+    if(_histChart) _histChart.destroy();
+    _histChart=new Chart(document.getElementById('hist-chart'),{
+      type:'line',
+      data:{labels,datasets:[{label:'Sky Score',data:d.values,borderColor:'#4A8FD9',backgroundColor:'rgba(74,143,217,0.08)',borderWidth:2,pointRadius:2,pointHoverRadius:4,tension:0.35,fill:true}]},
+      options:{responsive:true,scales:{y:{min:0,max:10,grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#5A6A88',font:{family:'DM Mono',size:10},callback:v=>v.toFixed(0)}},x:{grid:{display:false},ticks:{color:'#5A6A88',font:{family:'DM Mono',size:10},maxTicksLimit:10}}},plugins:{legend:{display:false},tooltip:{backgroundColor:'#0C1221',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,titleColor:'#8A9BB8',bodyColor:'#E8EDF5',titleFont:{family:'DM Mono',size:10},bodyFont:{family:'DM Mono',size:11},callbacks:{label:ctx=>`Score: ${ctx.parsed.y.toFixed(1)}`}}}}
+    });
+  } catch(e){console.error('History error:',e);}
+}
+
+// ── FETCH ──
+async function fetchData(){
+  if(!currentProfile) return;
+  try {
+    const r=await fetch(`${API}/score`); if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    renderScore(await r.json());
+  } catch(e){console.error('Fetch error:',e);}
+}
+
+// ── BOOT ──
+restoreCity();
+const saved=localStorage.getItem('darksky_profile');
+if(saved&&PROFILES[saved]) selectProfile(saved);
+
+setInterval(()=>{ if(currentProfile) fetchData(); },5000);
+setInterval(()=>{ if(currentProfile) fetchWeek(); },300000);
+setInterval(()=>{ if(currentProfile) fetchHistory(); },60000);
+</script>
+</body>
+</html>

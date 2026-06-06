@@ -1,0 +1,16 @@
+# Banco de histórico (gerado em runtime)
+history.db
+*.db
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Chaves e segredos
+*.pem
+.env
+
+# Sistema
+.DS_Store

@@ -1,0 +1,53 @@
+version: "3"
+services:
+  mongodb:
+    image: mongo:4.4
+    container_name: mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+
+  orion:
+    image: fiware/orion:3.10.1
+    container_name: orion
+    restart: always
+    depends_on:
+      - mongodb
+    ports:
+      - "1026:1026"
+    command: -dbhost mongodb -logLevel DEBUG -corsOrigin __ALL
+
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: mosquitto
+    restart: always
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+
+  iot-agent:
+    image: fiware/iotagent-ul:1.24.0
+    container_name: iot-agent
+    restart: always
+    depends_on:
+      - mongodb
+      - mosquitto
+      - orion
+    ports:
+      - "4041:4041"
+    environment:
+      - IOTA_CB_HOST=orion
+      - IOTA_CB_PORT=1026
+      - IOTA_NORTH_PORT=4041
+      - IOTA_REGISTRY_TYPE=mongodb
+      - IOTA_MONGO_HOST=mongodb
+      - IOTA_MONGO_PORT=27017
+      - IOTA_MONGO_DB=iotagentul
+      - IOTA_PROVIDER_URL=http://iot-agent:4041
+      - IOTA_MQTT_HOST=mosquitto
+      - IOTA_MQTT_PORT=1883
+      - IOTA_DEFAULT_RESOURCE=/iot/d
+      - IOTA_CB_NGSI_VERSION=v2
+      - IOTA_TIMESTAMP=true
+      - IOTA_AUTOCAST=true
