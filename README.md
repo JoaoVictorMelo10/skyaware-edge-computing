@@ -11,7 +11,7 @@
 |---|---|
 | João Victor Melo Santos | 566640 |
 | Murilo Jeronimo Ferreira Nunes | 560641 |
-| Vinicius Kozonoe Guaglini | 567264 |
+| Vinicius Kozonoe Guaglini | 564264 |
 | Yan Lucas Gonçalves da Silva | 567046 |
 | Bruno Santos Castilho | 566799 |
 
