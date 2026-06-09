@@ -24,7 +24,7 @@
 | Repositório GitHub | https://github.com/JoaoVictorMelo10/skyaware-edge-computing |
 | Simulação Wokwi | https://wokwi.com/projects/465279238243903489 |
 | Dashboard de teste (validação da API Edge) | `site/dashboard-teste.html` |
-| Site final da plataforma Sky Aware | *(em desenvolvimento — link a ser adicionado)* |
+| Site final da plataforma Sky Aware | https://lucx-yan.github.io/skyaware |
 
 ---
 
